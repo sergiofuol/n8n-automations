@@ -1,0 +1,260 @@
+{
+  "name": "My workflow",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 0 9,21 * * *"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -880,
+        200
+      ],
+      "id": "913a6a15-d084-4997-acb2-c614cf57be51",
+      "name": "Schedule Trigger",
+      "notesInFlow": false
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "d8eda5aa-826b-4432-b72b-9d481977f11a",
+              "leftValue": "={{ $json.pubDate }}",
+              "rightValue": "={{ new Date(new Date().getTime() - 12 * 60 * 60 * 1000) }}",
+              "operator": {
+                "type": "dateTime",
+                "operation": "after"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.2,
+      "position": [
+        -440,
+        100
+      ],
+      "id": "8d8e007e-a146-4aa5-897a-e6bb4a0f47f6",
+      "name": "Filter 12h",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "sendTo": "{{ $env.EMAIL_DESTINO }}",
+        "subject": "={{ \"Noticias de IA | \" + new Date().toLocaleDateString('es-ES') +\" | Últimas 12 h\"}}",
+        "message": "No hay noticias nuevas.",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        200
+      ],
+      "id": "fefe3caf-961f-4e87-9f97-84f7a113df1f",
+      "name": "Sin noticias",
+      "webhookId": "c9336fad-19d0-4004-859e-043ca730adb7"
+    },
+    {
+      "parameters": {
+        "sendTo": "{{ $env.EMAIL_DESTINO }}",
+        "subject": "={{ \"Noticias de IA | \" + new Date().toLocaleDateString('es-ES') +\" | Últimas 12 h\"}}",
+        "message": "={{ $json.htmlBody }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        220,
+        0
+      ],
+      "id": "2b6a8da6-207b-4bce-b8a5-d6914f2ea65e",
+      "name": "Enviar Noticias",
+      "webhookId": "c9336fad-19d0-4004-859e-043ca730adb7"
+    },
+    {
+      "parameters": {
+        "jsCode": "// items[] viene del RSS Read\nconst articles = items.map(item => ({\n  title: item.json.title,\n  link:  item.json.link\n}));\n\n// Construye un HTML con la lista de noticias\nlet html = `<h3>Noticias de IA – ${new Date().toLocaleDateString('es-ES')}</h3>`;\nhtml += '<ul>';\nfor (const art of articles) {\n  html += `<li><a href=\"${art.link}\" target=\"_blank\">${art.title}</a></li>`;\n}\nhtml += '</ul>';\n\n// Devuelve un único item con el HTML completo\nreturn [{ json: { htmlBody: html } }];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "id": "acf199d3-ccff-4e66-a413-173a2b4c2f2c",
+      "name": "Escribir Mail"
+    },
+    {
+      "parameters": {
+        "url": "={{ \"https://news.google.com/rss/search?q=bitcoin+when:12h&hl=es&gl=ES&ceid=ES:es\" }}",
+        "options": {
+          "ignoreSSL": false
+        }
+      },
+      "type": "n8n-nodes-base.rssFeedRead",
+      "typeVersion": 1.1,
+      "position": [
+        -660,
+        200
+      ],
+      "id": "b0fd6a62-793e-4dd5-a74d-1db6adb54eda",
+      "name": "Obtener Noticias",
+      "executeOnce": false,
+      "retryOnFail": true,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "sendTo": "{{ $env.EMAIL_DESTINO }}",
+        "subject": "={{ \"Noticias de IA | \" + new Date().toLocaleDateString('es-ES') +\" | Últimas 12 h\"}}",
+        "message": "No se ha podido descargar las noticias.",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        -440,
+        300
+      ],
+      "id": "2e953158-91b3-4465-a810-f0818a0ee01b",
+      "name": "Error Obtener Noticias",
+      "webhookId": "c9336fad-19d0-4004-859e-043ca730adb7"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "e78d568d-587d-4dec-bfd1-9707d971aacb",
+              "leftValue": "={{ !$('Filter 12h').item.json.isEmpty() }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -220,
+        100
+      ],
+      "id": "3b9e433f-bf23-445d-9785-f19e71786ca5",
+      "name": "NO es vacio?"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Obtener Noticias",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter 12h": {
+      "main": [
+        [
+          {
+            "node": "NO es vacio?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Escribir Mail": {
+      "main": [
+        [
+          {
+            "node": "Enviar Noticias",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Obtener Noticias": {
+      "main": [
+        [
+          {
+            "node": "Filter 12h",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Error Obtener Noticias",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "NO es vacio?": {
+      "main": [
+        [
+          {
+            "node": "Escribir Mail",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Sin noticias",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "3ae41e6a-8ee7-4455-81e1-d4a1b0ad28d4",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "b6c96aec25bf77868dd789f148476263affa11277ca20c1ba59f9b31556a275a"
+  },
+  "id": "FCQrKk6XVvLPFSKO",
+  "tags": []
+}
